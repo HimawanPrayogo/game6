@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinball's Himawan</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #2c2f36; /* Dark background */
+            color: white;
+            font-family: Arial, sans-serif;
+            flex-direction: column;
+        }
+
+        canvas {
+            border: 2px solid #fff;
+            background-color: #1d2128;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 30px;
+            font-weight: bold;
+            color: red;
+            display: none;
+        }
+
+        #score {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        #nextRoundBtn {
+            display: none;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #0095DD;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #nextRoundBtn:hover {
+            background-color: #006fa6;
+        }
+
+        #title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="title">Pinball's Himawan</div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="score">Score: 0</div>
+    <button id="nextRoundBtn" onclick="nextRound()">Next Round</button>
+    <div id="gameOver">Game Over! Bola gagal dipantulkan!</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const ballRadius = 10;
+        const paddleHeight = 10;
+        const paddleWidth = 75;
+        const paddleSpeed = 7;
+        let ballX = canvas.width / 2;
+        let ballY = canvas.height - 30;
+        let ballDX = 2;
+        let ballDY = -2;
+
+        let paddleX = (canvas.width - paddleWidth) / 2;
+        let rightPressed = false;
+        let leftPressed = false;
+
+        const targets = [];
+        const targetRowCount = 5;
+        const targetColumnCount = 6;
+        const targetWidth = 75;
+        const targetHeight = 20;
+        const targetPadding = 10;
+        const targetOffsetTop = 30;
+        const targetOffsetLeft = 30;
+
+        let gameOver = false;
+        let score = 0;
+
+        document.addEventListener('keydown', keyDownHandler, false);
+        document.addEventListener('keyup', keyUpHandler, false);
+
+        function keyDownHandler(e) {
+            if (e.key === 'Right' || e.key === 'ArrowRight') {
+                rightPressed = true;
+            } else if (e.key === 'Left' || e.key === 'ArrowLeft') {
+                leftPressed = true;
+            }
+        }
+
+        function keyUpHandler(e) {
+            if (e.key === 'Right' || e.key === 'ArrowRight') {
+                rightPressed = false;
+            } else if (e.key === 'Left' || e.key === 'ArrowLeft') {
+                leftPressed = false;
+            }
+        }
+
+        function collisionDetection() {
+            for (let c = 0; c < targetColumnCount; c++) {
+                for (let r = 0; r < targetRowCount; r++) {
+                    let t = targets[c][r];
+                    if (t.status === 1) {
+                        if (ballX > t.x && ballX < t.x + targetWidth && ballY > t.y && ballY < t.y + targetHeight) {
+                            ballDY = -ballDY;
+                            t.status = 0;
+                            score += 10; // Increase score when target is destroyed
+                        }
+                    }
+                }
+            }
+        }
+
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+            ctx.fillStyle = '#0095DD';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawPaddle() {
+            ctx.beginPath();
+            ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+            ctx.fillStyle = '#0095DD';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawTargets() {
+            for (let c = 0; c < targetColumnCount; c++) {
+                for (let r = 0; r < targetRowCount; r++) {
+                    if (targets[c][r].status === 1) {
+                        let targetX = targets[c][r].x;
+                        let targetY = targets[c][r].y;
+                        ctx.beginPath();
+                        ctx.rect(targetX, targetY, targetWidth, targetHeight);
+                        ctx.fillStyle = '#FF6347'; // Red color for targets
+                        ctx.fill();
+                        ctx.closePath();
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            if (gameOver) {
+                document.getElementById('gameOver').style.display = 'block';
+                document.getElementById('nextRoundBtn').style.display = 'block';
+                return;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawTargets();
+            drawBall();
+            drawPaddle();
+            collisionDetection();
+
+            if (ballX + ballDX > canvas.width - ballRadius || ballX + ballDX < ballRadius) {
+                ballDX = -ballDX;
+            }
+
+            if (ballY + ballDY < ballRadius) {
+                ballDY = -ballDY;
+            } else if (ballY + ballDY > canvas.height - ballRadius) {
+                if (ballX > paddleX && ballX < paddleX + paddleWidth) {
+                    ballDY = -ballDY;
+                } else {
+                    // Game Over condition: bola gagal dipantulkan
+                    gameOver = true;
+                }
+            }
+
+            if (rightPressed && paddleX < canvas.width - paddleWidth) {
+                paddleX += paddleSpeed;
+            } else if (leftPressed && paddleX > 0) {
+                paddleX -= paddleSpeed;
+            }
+
+            ballX += ballDX;
+            ballY += ballDY;
+
+            document.getElementById('score').innerText = 'Score: ' + score;
+
+            if (isAllTargetsDestroyed()) {
+                // All targets destroyed, proceed to next round
+                nextRound();
+            } else {
+                requestAnimationFrame(draw);
+            }
+        }
+
+        function isAllTargetsDestroyed() {
+            for (let c = 0; c < targetColumnCount; c++) {
+                for (let r = 0; r < targetRowCount; r++) {
+                    if (targets[c][r].status === 1) {
+                        return false; // At least one target is still active
+                    }
+                }
+            }
+            return true; // All targets are destroyed
+        }
+
+        function initTargets() {
+            let positions = [];
+
+            for (let c = 0; c < targetColumnCount; c++) {
+                targets[c] = [];
+                for (let r = 0; r < targetRowCount; r++) {
+                    targets[c][r] = { x: 0, y: 0, status: 1 };
+                }
+            }
+
+            // Generate random positions for each target
+            for (let c = 0; c < targetColumnCount; c++) {
+                for (let r = 0; r < targetRowCount; r++) {
+                    let targetX, targetY;
+                    let overlap;
+
+                    do {
+                        overlap = false;
+                        targetX = Math.random() * (canvas.width - targetWidth);
+                        targetY = Math.random() * (canvas.height / 2 - targetHeight);
+                        
+                        // Check if target position overlaps with existing targets
+                        for (let p = 0; p < positions.length; p++) {
+                            if (
+                                targetX < positions[p].x + targetWidth &&
+                                targetX + targetWidth > positions[p].x &&
+                                targetY < positions[p].y + targetHeight &&
+                                targetY + targetHeight > positions[p].y
+                            ) {
+                                overlap = true;
+                                break;
+                            }
+                        }
+                    } while (overlap);
+
+                    positions.push({ x: targetX, y: targetY });
+                    targets[c][r].x = targetX;
+                    targets[c][r].y = targetY;
+                }
+            }
+        }
+
+        function nextRound() {
+            // Reset game state for the next round
+            score = 0;
+            ballX = canvas.width / 2;
+            ballY = canvas.height - 30;
+            ballDX = 2;
+            ballDY = -2;
+            paddleX = (canvas.width - paddleWidth) / 2;
+            gameOver = false;
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('nextRoundBtn').style.display = 'none';
+            initTargets();
+            draw();
+        }
+
+        initTargets();
+        draw();
+    </script>
+</body>
+</html>
